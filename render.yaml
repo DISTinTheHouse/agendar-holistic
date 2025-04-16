@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: holistica-citas
+    runtime: python
+    buildCommand: |
+      pip install -r requirements.txt
+    startCommand: |
+      python manage.py migrate && python manage.py runserver 0.0.0.0:10000
+    envVars:
+      - key: DJANGO_SETTINGS_MODULE
+        value: holistica_citas.settings
+    plan: free
+    autoDeploy: true
