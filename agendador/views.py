@@ -54,17 +54,16 @@ def webhook_cal(request):
     if request.method == 'POST':
         try:
             data = json.loads(request.body)
-            print(json.dumps(data, indent=2))
+            p@csrf_exempt
+def webhook_cal(request):
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
             payload = data.get('payload', {})
+
             nombre = payload.get('name', 'Sin nombre')
             correo = payload.get('email', '')
-            start_time = payload.get('startTime', '')  # viene en formato ISO 8601
-
-            print("==== PAYLOAD COMPLETO ====")
-            print(json.dumps(payload, indent=2))
-
-            # o si Render no muestra `print`, usa logger:
-            logger.warning("Payload: %s", json.dumps(payload, indent=2))
+            start_time = payload.get('start_time', '')  # ← Cal.com usa snake_case por default
 
             logger.warning("Webhook recibido:\n%s", json.dumps(payload, indent=2))
 
@@ -76,20 +75,22 @@ def webhook_cal(request):
                 Cita.objects.create(
                     nombre=nombre,
                     correo=correo,
+                    telefono='-',  # Cal no manda esto por default
                     fecha=fecha,
                     hora=hora,
-                    confirmado=True  # ya viene confirmada desde Cal
+                    confirmado=True
                 )
-                logger.info("Cita creada para %s a las %s", nombre, start_time)
+                logger.info("✅ Cita creada correctamente para %s", nombre)
                 return JsonResponse({'status': 'ok'}, status=200)
-            else:
-                return JsonResponse({'error': 'Fecha inválida'}, status=400)
+
+            return JsonResponse({'error': 'start_time inválido'}, status=400)
 
         except Exception as e:
-            logger.error("Error en webhook: %s", str(e))
+            logger.error("❌ Error en webhook: %s", str(e))
             return JsonResponse({'error': str(e)}, status=500)
 
     return JsonResponse({'error': 'Método no permitido'}, status=405)
+
 
 @login_required
 def dashboard_citas(request):
