@@ -53,7 +53,7 @@ def webhook_cal(request):
         try:
             data = json.loads(request.body)
             payload = data.get('payload', {})
-
+            print(json.dumps(payload, indent=2))
             nombre = payload.get('name', 'Sin nombre')
             correo = payload.get('email', '')
             start_time = payload.get('startTime', '')  # viene en formato ISO 8601
