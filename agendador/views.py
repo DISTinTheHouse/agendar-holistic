@@ -53,37 +53,33 @@ def agendar_cita(request):
 def webhook_cal(request):
     if request.method == 'POST':
         try:
-            # Convertir JSON crudo en diccionario
             data = json.loads(request.body)
+            payload = data.get("payload", {})
 
-            # Ya no hay 'payload', todo viene plano
-            nombre = data.get('responses', {}).get('name', {}).get('value', 'Sin nombre')
-            correo = data.get('responses', {}).get('email', {}).get('value', '')
-            uid = data.get('uid', '')
-            direccion = data.get('location', '')
-            notas = data.get('additionalNotes', '')
-            start_time = data.get('startTime', '')
+            nombre = payload.get('responses', {}).get('name', {}).get('value', 'Sin nombre')
+            correo = payload.get('responses', {}).get('email', {}).get('value', '')
+            uid = payload.get('uid', '')
+            direccion = payload.get('location', '')
+            notas = payload.get('additionalNotes', '')
+            start_time = payload.get('startTime', '')
 
-            logger.warning("Webhook recibido:\n%s", json.dumps(data, indent=2))
+            logger.warning("Webhook recibido:\n%s", json.dumps(payload, indent=2))
 
             if not uid or not start_time:
                 return JsonResponse({'error': 'Faltan datos clave'}, status=400)
 
-            # Prevenir duplicados por UID
             if Cita.objects.filter(uid=uid).exists():
                 logger.info("⚠️ Cita ya registrada con UID: %s", uid)
                 return JsonResponse({'status': 'duplicado'}, status=200)
 
-            # Convertir fecha/hora
             fecha_obj = datetime.fromisoformat(start_time.replace('Z', '+00:00'))
             fecha = fecha_obj.date()
             hora = fecha_obj.time()
 
-            # Guardar cita
             Cita.objects.create(
                 nombre=nombre,
                 correo=correo,
-                telefono=direccion,  # Aquí guardamos la dirección como si fuera teléfono (temporal)
+                telefono=direccion,
                 fecha=fecha,
                 hora=hora,
                 uid=uid,
@@ -100,7 +96,6 @@ def webhook_cal(request):
             return JsonResponse({'error': str(e)}, status=500)
 
     return JsonResponse({'error': 'Método no permitido'}, status=405)
-
 
 
 @login_required
