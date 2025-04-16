@@ -54,16 +54,11 @@ def webhook_cal(request):
     if request.method == 'POST':
         try:
             data = json.loads(request.body)
-            p@csrf_exempt
-def webhook_cal(request):
-    if request.method == 'POST':
-        try:
-            data = json.loads(request.body)
             payload = data.get('payload', {})
 
             nombre = payload.get('name', 'Sin nombre')
             correo = payload.get('email', '')
-            start_time = payload.get('start_time', '')  # ← Cal.com usa snake_case por default
+            start_time = payload.get('start_time', '')  # Confirmamos que es snake_case
 
             logger.warning("Webhook recibido:\n%s", json.dumps(payload, indent=2))
 
@@ -75,12 +70,12 @@ def webhook_cal(request):
                 Cita.objects.create(
                     nombre=nombre,
                     correo=correo,
-                    telefono='-',  # Cal no manda esto por default
+                    telefono='-',  # No viene del payload default
                     fecha=fecha,
                     hora=hora,
                     confirmado=True
                 )
-                logger.info("✅ Cita creada correctamente para %s", nombre)
+                logger.info("✅ Cita creada para %s", nombre)
                 return JsonResponse({'status': 'ok'}, status=200)
 
             return JsonResponse({'error': 'start_time inválido'}, status=400)
