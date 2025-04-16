@@ -53,34 +53,37 @@ def agendar_cita(request):
 def webhook_cal(request):
     if request.method == 'POST':
         try:
+            # Convertir JSON crudo en diccionario
             data = json.loads(request.body)
-            payload = data  # ya no necesitas .get('payload')
 
-            nombre = payload.get('responses', {}).get('name', {}).get('value', 'Sin nombre')
-            correo = payload.get('responses', {}).get('email', {}).get('value', '')
-            uid = payload.get('uid', '')
-            direccion = payload.get('location', '')
-            notas = payload.get('additionalNotes', '')
-            start_time = payload.get('startTime', '')
+            # Ya no hay 'payload', todo viene plano
+            nombre = data.get('responses', {}).get('name', {}).get('value', 'Sin nombre')
+            correo = data.get('responses', {}).get('email', {}).get('value', '')
+            uid = data.get('uid', '')
+            direccion = data.get('location', '')
+            notas = data.get('additionalNotes', '')
+            start_time = data.get('startTime', '')
 
-            logger.warning("Webhook recibido:\n%s", json.dumps(payload, indent=2))
+            logger.warning("Webhook recibido:\n%s", json.dumps(data, indent=2))
 
             if not uid or not start_time:
                 return JsonResponse({'error': 'Faltan datos clave'}, status=400)
 
-            # Prevenir duplicados
+            # Prevenir duplicados por UID
             if Cita.objects.filter(uid=uid).exists():
                 logger.info("⚠️ Cita ya registrada con UID: %s", uid)
                 return JsonResponse({'status': 'duplicado'}, status=200)
 
+            # Convertir fecha/hora
             fecha_obj = datetime.fromisoformat(start_time.replace('Z', '+00:00'))
             fecha = fecha_obj.date()
             hora = fecha_obj.time()
 
+            # Guardar cita
             Cita.objects.create(
                 nombre=nombre,
                 correo=correo,
-                telefono=direccion,  # temporal, puedes separar luego
+                telefono=direccion,  # Aquí guardamos la dirección como si fuera teléfono (temporal)
                 fecha=fecha,
                 hora=hora,
                 uid=uid,
