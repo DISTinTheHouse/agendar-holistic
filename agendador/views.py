@@ -43,6 +43,8 @@ import json
 from .models import Cita
 from datetime import datetime
 from django.contrib.auth.decorators import login_required
+import logging
+logger = logging.getLogger(__name__)
 
 def agendar_cita(request):
     return render(request, 'agendador/formulario.html')
@@ -52,11 +54,19 @@ def webhook_cal(request):
     if request.method == 'POST':
         try:
             data = json.loads(request.body)
+            print(json.dumps(data, indent=2))
             payload = data.get('payload', {})
-            print(json.dumps(payload, indent=2))
             nombre = payload.get('name', 'Sin nombre')
             correo = payload.get('email', '')
             start_time = payload.get('startTime', '')  # viene en formato ISO 8601
+
+            print("==== PAYLOAD COMPLETO ====")
+            print(json.dumps(payload, indent=2))
+
+            # o si Render no muestra `print`, usa logger:
+            logger.warning("Payload: %s", json.dumps(payload, indent=2))
+
+            logger.warning("Webhook recibido:\n%s", json.dumps(payload, indent=2))
 
             if start_time:
                 fecha_obj = datetime.fromisoformat(start_time.replace('Z', '+00:00'))
@@ -70,12 +80,13 @@ def webhook_cal(request):
                     hora=hora,
                     confirmado=True  # ya viene confirmada desde Cal
                 )
-
+                logger.info("Cita creada para %s a las %s", nombre, start_time)
                 return JsonResponse({'status': 'ok'}, status=200)
             else:
                 return JsonResponse({'error': 'Fecha inválida'}, status=400)
 
         except Exception as e:
+            logger.error("Error en webhook: %s", str(e))
             return JsonResponse({'error': str(e)}, status=500)
 
     return JsonResponse({'error': 'Método no permitido'}, status=405)
