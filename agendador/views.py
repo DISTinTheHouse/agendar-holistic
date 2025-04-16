@@ -54,37 +54,50 @@ def webhook_cal(request):
     if request.method == 'POST':
         try:
             data = json.loads(request.body)
-            payload = data.get('payload', {})
+            payload = data  # ya no necesitas .get('payload')
 
-            nombre = payload.get('name', 'Sin nombre')
-            correo = payload.get('email', '')
-            start_time = payload.get('start_time', '')  # Confirmamos que es snake_case
+            nombre = payload.get('responses', {}).get('name', {}).get('value', 'Sin nombre')
+            correo = payload.get('responses', {}).get('email', {}).get('value', '')
+            uid = payload.get('uid', '')
+            direccion = payload.get('location', '')
+            notas = payload.get('additionalNotes', '')
+            start_time = payload.get('startTime', '')
 
             logger.warning("Webhook recibido:\n%s", json.dumps(payload, indent=2))
 
-            if start_time:
-                fecha_obj = datetime.fromisoformat(start_time.replace('Z', '+00:00'))
-                fecha = fecha_obj.date()
-                hora = fecha_obj.time()
+            if not uid or not start_time:
+                return JsonResponse({'error': 'Faltan datos clave'}, status=400)
 
-                Cita.objects.create(
-                    nombre=nombre,
-                    correo=correo,
-                    telefono='-',  # No viene del payload default
-                    fecha=fecha,
-                    hora=hora,
-                    confirmado=True
-                )
-                logger.info("✅ Cita creada para %s", nombre)
-                return JsonResponse({'status': 'ok'}, status=200)
+            # Prevenir duplicados
+            if Cita.objects.filter(uid=uid).exists():
+                logger.info("⚠️ Cita ya registrada con UID: %s", uid)
+                return JsonResponse({'status': 'duplicado'}, status=200)
 
-            return JsonResponse({'error': 'start_time inválido'}, status=400)
+            fecha_obj = datetime.fromisoformat(start_time.replace('Z', '+00:00'))
+            fecha = fecha_obj.date()
+            hora = fecha_obj.time()
+
+            Cita.objects.create(
+                nombre=nombre,
+                correo=correo,
+                telefono=direccion,  # temporal, puedes separar luego
+                fecha=fecha,
+                hora=hora,
+                uid=uid,
+                notas=notas,
+                direccion=direccion,
+                confirmado=True
+            )
+
+            logger.info("✅ Cita creada correctamente para %s", nombre)
+            return JsonResponse({'status': 'ok'}, status=200)
 
         except Exception as e:
             logger.error("❌ Error en webhook: %s", str(e))
             return JsonResponse({'error': str(e)}, status=500)
 
     return JsonResponse({'error': 'Método no permitido'}, status=405)
+
 
 
 @login_required
